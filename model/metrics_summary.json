@@ -1,0 +1,24 @@
+{
+  "test_accuracy": 0.5799999833106995,
+  "test_loss": 2.3277010917663574,
+  "per_class_accuracy": {
+    "neutral": 0.35,
+    "calm": 0.85,
+    "happy": 0.375,
+    "sad": 0.425,
+    "angry": 0.675,
+    "fearful": 0.225,
+    "disgust": 0.675,
+    "surprised": 0.95
+  },
+  "n_train_samples": 3840,
+  "n_val_samples": 180,
+  "n_test_samples": 300,
+  "test_actors_held_out": [
+    "Actor_20",
+    "Actor_21",
+    "Actor_22",
+    "Actor_23",
+    "Actor_24"
+  ]
+}

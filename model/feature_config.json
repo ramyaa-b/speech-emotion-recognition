@@ -1,0 +1,10 @@
+{
+  "sr": 22050,
+  "duration": 3.0,
+  "n_mfcc": 40,
+  "n_chroma": 12,
+  "n_contrast_bands": 7,
+  "hop_length": 512,
+  "max_frames": 130,
+  "n_features": 141
+}
