@@ -124,9 +124,15 @@ augmented).
 ## Project structure
 
 ```
-├── app.py                      # Streamlit app
+├── app.py                      # standalone Streamlit app (loads model directly)
+├── backend/
+│   ├── main.py                 # FastAPI app — /predict, /health
+│   ├── inference.py            # model loaded once at startup, not per-request
+│   └── schemas.py              # typed request/response models
+├── frontend/
+│   └── streamlit_app.py        # thin client — calls the backend API instead of loading the model
 ├── src/
-│   ├── feature_extraction.py   # shared by training + inference — single source of truth
+│   ├── feature_extraction.py   # shared by training + both inference paths — single source of truth
 │   └── model_def.py            # model architecture (rebuilt + weights loaded, see note below)
 ├── model/
 │   ├── emotion_model.h5        # trained weights
@@ -136,6 +142,7 @@ augmented).
 │   └── metrics_summary.json
 ├── notebooks/
 │   └── Emotion_Recognition_v2_training.ipynb
+├── Dockerfile.backend / Dockerfile.frontend / docker-compose.yml
 └── assets/
 ```
 
@@ -152,8 +159,33 @@ identical architecture that produced the checkpoint.
 ```bash
 git clone https://github.com/<your-username>/speech-emotion-recognition.git
 cd speech-emotion-recognition
+```
+
+**Option 1 — single Streamlit app (simplest):**
+```bash
 pip install -r requirements.txt
 streamlit run app.py
+```
+
+**Option 2 — decoupled backend + frontend (Docker):**
+
+A FastAPI backend serves predictions over a REST API (`/predict`, `/health`), loading the model once at startup rather than per-request; the Streamlit frontend is a thin client that calls it over HTTP. This is the architecture behind `backend/` and `frontend/`.
+
+```bash
+docker compose up --build
+```
+- Frontend: http://localhost:8501
+- Backend interactive docs: http://localhost:8000/docs
+
+Or run each side without Docker, in two terminals:
+```bash
+# terminal 1
+pip install -r backend/requirements.txt
+uvicorn backend.main:app --reload
+
+# terminal 2
+pip install -r frontend/requirements.txt
+streamlit run frontend/streamlit_app.py
 ```
 
 ## Limitations & future work
