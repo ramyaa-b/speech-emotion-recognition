@@ -1,10 +1,10 @@
 """
-Speech Emotion Recognition — thin Streamlit client.
+Speech Emotion Recognition, thin Streamlit client.
 
 Unlike app.py at the repo root (which loads the model directly), this
-version calls the FastAPI backend's /predict endpoint — a decoupled,
-API-first architecture where the model only needs to be loaded once, in
-the backend process, regardless of how many frontend clients connect.
+version calls the FastAPI backend's /predict endpoint: a decoupled,
+API-first setup where the model only needs to be loaded once, in the
+backend process, regardless of how many frontend clients connect.
 """
 
 import os
@@ -19,8 +19,6 @@ import streamlit as st
 # allow importing src/ui_theme.py when run from the frontend/ directory
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from src.ui_theme import (
-    CURRENT,
-    EMBER,
     EMOTION_EMOJI,
     INK,
     MUTED,
@@ -28,6 +26,7 @@ from src.ui_theme import (
     THEME_CSS,
     emotion_color,
     prediction_badge_html,
+    section_box_html,
     waveform_divider_html,
 )
 
@@ -62,8 +61,8 @@ def plot_attention(attention_weights: list, predicted_emotion: str, duration: fl
     times = np.linspace(0, duration, num=len(attention_weights))
     ax.plot(times, attention_weights, color=accent, linewidth=2)
     ax.fill_between(times, attention_weights, alpha=0.25, color=accent)
-    ax.set_xlabel("time (s)", color=MUTED, fontsize=9)
-    ax.set_ylabel("attention", color=accent, fontsize=9)
+    ax.set_xlabel("time (seconds)", color=MUTED, fontsize=9)
+    ax.set_ylabel("what mattered most", color=accent, fontsize=9)
     ax.tick_params(colors=MUTED, labelsize=8)
     for spine in ax.spines.values():
         spine.set_color("#262C39")
@@ -72,14 +71,12 @@ def plot_attention(attention_weights: list, predicted_emotion: str, duration: fl
 
 
 def main():
-    st.set_page_config(page_title="Speech Emotion Recognition", page_icon="🎤", layout="centered")
+    st.set_page_config(page_title="Speech Emotion Recognition", page_icon="🔊", layout="centered")
     st.markdown(THEME_CSS, unsafe_allow_html=True)
 
-    st.markdown('<div class="ser-hero-title">🎤 Speech Emotion Recognition</div>', unsafe_allow_html=True)
+    st.markdown('<div class="ser-hero-title">Speech Emotion Recognition</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="ser-hero-sub">Decoupled architecture: this UI calls a FastAPI backend over '
-        "HTTP rather than loading the model in-process — the model loads once, in the API, no "
-        "matter how many clients connect.</div>",
+        '<div class="ser-hero-sub">Upload a short voice clip and see what emotion it sounds like.</div>',
         unsafe_allow_html=True,
     )
     st.markdown(waveform_divider_html(), unsafe_allow_html=True)
@@ -87,16 +84,13 @@ def main():
     try:
         health = requests.get(f"{API_URL}/health", timeout=5).json()
         if not health.get("model_loaded"):
-            st.warning("Backend is up but the model hasn't finished loading yet. Try again in a moment.")
+            st.warning("The model is still starting up. Try again in a moment.")
     except requests.exceptions.RequestException:
-        st.error(
-            f"Can't reach the backend at `{API_URL}`. Is it running? "
-            f"(`uvicorn backend.main:app` or `docker compose up`)"
-        )
+        st.error(f"Can't reach the backend at `{API_URL}`. Make sure it's running.")
         st.stop()
 
     uploaded = st.file_uploader(
-        "Upload a short speech clip (wav / mp3 / ogg / flac / m4a)",
+        "Upload a short audio clip (wav, mp3, ogg, flac, or m4a)",
         type=["wav", "mp3", "ogg", "flac", "m4a"],
     )
 
@@ -104,7 +98,7 @@ def main():
         audio_bytes = uploaded.getvalue()
         st.audio(audio_bytes)
 
-        with st.spinner("Analyzing..."):
+        with st.spinner("Listening..."):
             try:
                 resp = requests.post(
                     f"{API_URL}/predict",
@@ -114,7 +108,7 @@ def main():
                 resp.raise_for_status()
                 result = resp.json()
             except requests.exceptions.RequestException as e:
-                st.error(f"Prediction request failed: {e}")
+                st.error(f"Something went wrong getting a prediction: {e}")
                 st.stop()
 
         top = result["predicted_emotion"]
@@ -124,8 +118,15 @@ def main():
 
         st.plotly_chart(plot_probabilities(result["probabilities"]), use_container_width=True)
 
-        with st.expander("Why did the model predict this? (attention over time)"):
-            st.pyplot(plot_attention(result["attention_weights"], top))
+        st.markdown(
+            section_box_html(
+                "What part of your voice mattered most",
+                "The highlighted line below shows which part of your clip had the "
+                "biggest effect on the result.",
+            ),
+            unsafe_allow_html=True,
+        )
+        st.pyplot(plot_attention(result["attention_weights"], top))
     else:
         st.markdown(
             '<div class="ser-caption">Upload an audio clip to get started.</div>',

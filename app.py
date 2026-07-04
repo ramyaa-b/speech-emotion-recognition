@@ -1,5 +1,5 @@
 """
-Speech Emotion Recognition — Streamlit app.
+Speech Emotion Recognition, Streamlit app.
 
 Loads the model artifacts produced by notebooks/Emotion_Recognition_v2_training.ipynb
 (model/emotion_model.h5 + scaler.pkl + label_encoder.pkl + feature_config.json)
@@ -21,16 +21,14 @@ import streamlit as st
 from src.feature_extraction import extract_frame_features, load_feature_config
 from src.model_def import build_model
 from src.ui_theme import (
-    CURRENT,
-    EMBER,
     EMOTION_EMOJI,
     INK,
     MUTED,
-    PANEL,
     PAPER,
     THEME_CSS,
     emotion_color,
     prediction_badge_html,
+    section_box_html,
     waveform_divider_html,
 )
 
@@ -88,7 +86,6 @@ def plot_probabilities(probs, class_names):
         go.Bar(x=values, y=labels, orientation="h", marker=dict(color=colors))
     )
     fig.update_layout(
-        xaxis_title=None,
         xaxis=dict(range=[0, 1], gridcolor="#262C39", tickfont=dict(color=MUTED)),
         yaxis=dict(tickfont=dict(color=PAPER, size=14)),
         height=380,
@@ -109,8 +106,8 @@ def plot_waveform_attention(y, sr, attn, cfg, predicted_emotion):
 
     times = np.linspace(0, len(y) / sr, num=len(y))
     ax1.plot(times, y, color=MUTED, linewidth=0.5)
-    ax1.set_ylabel("waveform", color=MUTED, fontsize=9)
-    ax1.set_xlabel("time (s)", color=MUTED, fontsize=9)
+    ax1.set_ylabel("your voice", color=MUTED, fontsize=9)
+    ax1.set_xlabel("time (seconds)", color=MUTED, fontsize=9)
     ax1.tick_params(colors=MUTED, labelsize=8)
     for spine in ax1.spines.values():
         spine.set_color("#262C39")
@@ -119,7 +116,7 @@ def plot_waveform_attention(y, sr, attn, cfg, predicted_emotion):
     attn_times = np.linspace(0, cfg["duration"], num=len(attn))
     ax2.plot(attn_times, attn, color=accent, linewidth=2)
     ax2.fill_between(attn_times, attn, alpha=0.25, color=accent)
-    ax2.set_ylabel("attention", color=accent, fontsize=9)
+    ax2.set_ylabel("what mattered most", color=accent, fontsize=9)
     ax2.tick_params(axis="y", colors=accent, labelsize=8)
     for spine in ax2.spines.values():
         spine.set_visible(False)
@@ -129,33 +126,20 @@ def plot_waveform_attention(y, sr, attn, cfg, predicted_emotion):
 
 
 def main():
-    st.set_page_config(page_title="Speech Emotion Recognition", page_icon="🎤", layout="centered")
+    st.set_page_config(page_title="Speech Emotion Recognition", page_icon="🔊", layout="centered")
     st.markdown(THEME_CSS, unsafe_allow_html=True)
 
-    st.markdown('<div class="ser-hero-title">🎤 Speech Emotion Recognition</div>', unsafe_allow_html=True)
+    st.markdown('<div class="ser-hero-title">Speech Emotion Recognition</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="ser-hero-sub">CNN + BiLSTM with attention, trained on RAVDESS with a '
-        "speaker-independent split — evaluated on five actors the model never heard during "
-        "training, not a random shuffle that leaks voice identity into the test set.</div>",
+        '<div class="ser-hero-sub">Upload a short voice clip and see what emotion it sounds like.</div>',
         unsafe_allow_html=True,
     )
     st.markdown(waveform_divider_html(), unsafe_allow_html=True)
 
-    st.markdown(
-        f"""
-        <div class="ser-stat-row">
-            <div class="ser-stat"><div class="ser-stat-num">58.0%</div><div class="ser-stat-label">Test accuracy</div></div>
-            <div class="ser-stat"><div class="ser-stat-num">12.5%</div><div class="ser-stat-label">Random baseline</div></div>
-            <div class="ser-stat"><div class="ser-stat-num">5</div><div class="ser-stat-label">Held-out speakers</div></div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
     cfg, scaler, label_encoder, model, attn_model, class_names = load_artifacts()
 
     uploaded = st.file_uploader(
-        "Upload a short speech clip (wav / mp3 / ogg / flac / m4a)",
+        "Upload a short audio clip (wav, mp3, ogg, flac, or m4a)",
         type=["wav", "mp3", "ogg", "flac", "m4a"],
     )
 
@@ -163,7 +147,7 @@ def main():
         audio_bytes = uploaded.read()
         st.audio(audio_bytes)
 
-        with st.spinner("Analyzing..."):
+        with st.spinner("Listening..."):
             probs, attn, y, sr = predict(audio_bytes, cfg, scaler, model, attn_model, class_names)
 
         top_idx = int(np.argmax(probs))
@@ -173,27 +157,27 @@ def main():
 
         st.plotly_chart(plot_probabilities(probs, class_names), use_container_width=True)
 
-        with st.expander("Why did the model predict this? (attention over time)"):
-            st.pyplot(plot_waveform_attention(y, sr, attn, cfg, top_emotion))
-            st.markdown(
-                '<div class="ser-caption">The colored line shows which moments in the clip the '
-                "model weighted most heavily — it doesn't just average the whole clip, it learns "
-                "to focus on the most emotionally salient frames. Line color matches the "
-                "predicted emotion's arousal group (ember = high-arousal, teal = low-arousal).</div>",
-                unsafe_allow_html=True,
-            )
+        st.markdown(
+            section_box_html(
+                "What part of your voice mattered most",
+                "The highlighted line below shows which part of your clip had the "
+                "biggest effect on the result.",
+            ),
+            unsafe_allow_html=True,
+        )
+        st.pyplot(plot_waveform_attention(y, sr, attn, cfg, top_emotion))
 
-        with st.expander("Model limitations"):
-            st.markdown(
-                f"""
-                <div class="ser-caption">
-                &bull; Trained on <b style="color:{PAPER}">acted</b> emotional speech (RAVDESS), not spontaneous speech — real-world tone tends to be subtler.<br>
-                &bull; Weakest on <b style="color:{EMBER}">fearful</b> (23% recall) and <b style="color:{EMBER}">happy</b> (38% recall); strongest on <b style="color:{EMBER}">surprised</b> (95% recall) and <b style="color:{CURRENT}">calm</b> (85% recall).<br>
-                &bull; Common confusions cluster <i>within</i> arousal groups, not across them — happy&harr;surprised (both high-arousal), sad&harr;calm (both low-arousal) — the acoustic signal for arousal is clearer than for valence.
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+        st.markdown(
+            section_box_html(
+                "Good to know",
+                "This model learned from actors reading the same lines in different "
+                "emotional tones, so it works best on clear, expressive speech rather "
+                "than everyday background chatter. It's most confident with strong, "
+                "easy to spot emotions like surprise and calm. It can sometimes mix up "
+                "similar sounding emotions, like happy and surprised, or sad and calm.",
+            ),
+            unsafe_allow_html=True,
+        )
     else:
         st.markdown(
             '<div class="ser-caption">Upload an audio clip to get started.</div>',
