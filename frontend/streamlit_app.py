@@ -72,7 +72,7 @@ def plot_attention(attention_weights: list, predicted_emotion: str, duration: fl
 
 
 def main():
-    st.set_page_config(page_title="Speech Emotion Recognition", page_icon="🎤", layout="centered")
+    st.set_page_config(page_title="Speech Emotion Recognition", layout="centered")
     st.markdown(THEME_CSS, unsafe_allow_html=True)
 
     st.markdown('<div class="ser-hero-title">Speech Emotion Recognition</div>', unsafe_allow_html=True)
