@@ -75,10 +75,10 @@ def main():
     st.set_page_config(page_title="Speech Emotion Recognition", page_icon="🎤", layout="centered")
     st.markdown(THEME_CSS, unsafe_allow_html=True)
 
-    st.markdown('<div class="ser-hero-title">🎤 Speech Emotion Recognition</div>', unsafe_allow_html=True)
+    st.markdown('<div class="ser-hero-title">Speech Emotion Recognition</div>', unsafe_allow_html=True)
     st.markdown(
         '<div class="ser-hero-sub">Decoupled architecture: this UI calls a FastAPI backend over '
-        "HTTP rather than loading the model in-process — the model loads once, in the API, no "
+        "HTTP rather than loading the model in-process , the model loads once, in the API, no "
         "matter how many clients connect.</div>",
         unsafe_allow_html=True,
     )
