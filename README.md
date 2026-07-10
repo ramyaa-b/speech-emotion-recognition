@@ -6,7 +6,7 @@ train/test split** — evaluated on five actors the model never heard during
 training, not a random shuffle that leaks voice identity into the test set.
 
 **[Try the live demo →](https://speech-emotion-recognition-dxvrasysddzw3o2mwhrza9.streamlit.app/)**
-*(update this link once redeployed)*
+
 
 ---
 
